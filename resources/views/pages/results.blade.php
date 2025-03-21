@@ -5,11 +5,13 @@
         <div class="container mx-auto p-4">
             <h2 class="text-3xl font-bold text-center mb-6 text-white">Hasil Prediksi Panen</h2>
 
-            <!-- Tombol Mode & Download PDF -->
+            <!-- Tombol Mode -->
             <div class="flex justify-between items-center mb-4">
                 <div class="flex gap-3">
-                    <button id="btnMonthly" class="mode-btn inactive">Mode Bulanan</button>
-                    <button id="btnYearly" class="mode-btn inactive">Mode Tahunan</button>
+                    <button id="btnMonthlyHistorical" class="mode-btn inactive">Data Aktual (Bulan)</button>
+                    <button id="btnMonthlyFuture" class="mode-btn inactive">Hasil Prediksi (Bulan)</button>
+                    <button id="btnYearlyHistorical" class="mode-btn inactive">Data Aktual (Tahun)</button>
+                    <button id="btnYearlyFuture" class="mode-btn inactive">Hasil Prediksi (Tahun)</button>
                 </div>
                 <button id="btnDownload"
                     class="px-4 py-2 rounded bg-indigo-600 text-white shadow hover:bg-indigo-700 transition flex items-center gap-2">
@@ -39,10 +41,26 @@
                 <p class="text-lg text-gray-700 dark:text-gray-300">{{ $analysis['suggestion'] }}</p>
             </div>
 
+            <!-- Penjelasan Detail Prediksi Masa Depan -->
+            @if (isset($analysis['detailedExplanationFuture']) && $analysis['detailedExplanationFuture'] != '')
+                <div class="bg-yellow-50 dark:bg-gray-700 rounded-lg p-6 mt-6 shadow">
+                    <h3 class="text-xl font-bold mb-2 text-gray-700 dark:text-gray-300">Penjelasan Detail Prediksi Masa
+                        Depan</h3>
+                    <p class="text-lg text-gray-700 dark:text-gray-300">{{ $analysis['detailedExplanationFuture'] }}</p>
+                </div>
+            @endif
+
             <!-- Tombol Kembali -->
+
             <div class="flex justify-center mt-6">
-                <a href="{{ route('home') }}" class="px-4 py-2 border bg-indigo-600 text-white shadow hover:bg-indigo-700 border-gray-300 rounded  transition">
-                    Upload File Lain
+                <a href="{{ route('home') }}"
+                    class="group inline-flex items-center px-8 py-4 rounded-xl border-2 border-emerald-500 dark:border-emerald-400 text-emerald-600 dark:text-emerald-400 font-medium hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transform transition-all duration-300 hover:-translate-y-1">
+                    <span>Upload Lagi Yu</span>
+                    <svg class="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
                 </a>
             </div>
         </div>
@@ -50,7 +68,6 @@
 
     @push('styles')
         <style>
-            /* Tombol mode */
             .mode-btn {
                 padding: 0.5rem 1rem;
                 border-radius: 0.375rem;
@@ -60,16 +77,13 @@
 
             .mode-btn.active {
                 background-color: #10B981;
-                /* hijau emerald */
                 color: #ffffff;
                 cursor: default;
             }
 
             .mode-btn.inactive {
                 background-color: #E5E7EB;
-                /* abu muda */
                 color: #4B5563;
-                /* abu tua */
                 opacity: 0.75;
                 cursor: pointer;
             }
@@ -78,7 +92,6 @@
                 opacity: 1;
             }
 
-            /* Custom Scrollbar untuk container grafik */
             .custom-scroll::-webkit-scrollbar {
                 height: 8px;
             }
@@ -103,37 +116,61 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Data dari API Flask (dari session)
-                let monthlyLabels = {!! json_encode($analysis['timeLabelsMonthly']) !!};
-                const monthlyPredictions = {!! json_encode($analysis['predictionsMonthly']) !!};
-                const monthlyActual = {!! json_encode($analysis['actualMonthly']) !!};
+                // Data dari API Flask (disimpan di session)
+                const monthlyLabelsHistorical = {!! json_encode($analysis['timeLabelsMonthlyHistorical']) !!};
+                const monthlyPredictionsHistorical = {!! json_encode($analysis['predictionsMonthlyHistorical']) !!};
 
-                const yearlyLabels = {!! json_encode($analysis['timeLabelsYearly']) !!};
-                const yearlyPredictions = {!! json_encode($analysis['predictionsYearly']) !!};
-                const yearlyActual = {!! json_encode($analysis['actualYearly']) !!};
+                const monthlyLabelsFuture = {!! json_encode($analysis['timeLabelsMonthlyFuture']) !!};
+                const monthlyPredictionsFuture = {!! json_encode($analysis['predictionsMonthlyFuture']) !!};
 
-                // Urutkan data monthly secara ascending (misal "2021-01", "2021-02", dst.)
-                monthlyLabels.sort((a, b) => a.localeCompare(b));
+                const yearlyLabelsHistorical = {!! json_encode($analysis['timeLabelsYearlyHistorical']) !!};
+                const yearlyPredictionsHistorical = {!! json_encode($analysis['predictionsYearlyHistorical']) !!};
+                const yearlyActualHistorical = {!! json_encode($analysis['actualYearlyHistorical']) !!};
 
-                let currentMode = 'monthly';
+                const yearlyLabelsFuture = {!! json_encode($analysis['timeLabelsYearlyFuture'] ?? '[]') !!};
+                const yearlyPredictionsFuture = {!! json_encode($analysis['predictionsYearlyFuture'] ?? '[]') !!};
+
+                // Default mode: Bulanan Historis
+                let currentMode = 'monthlyHistorical';
                 const ctx = document.getElementById('predictionChart').getContext('2d');
+                let myLineChart;
 
                 function renderChart(mode) {
                     currentMode = mode;
-                    let labels = mode === 'yearly' ? yearlyLabels : monthlyLabels;
-                    let predictions = mode === 'yearly' ? yearlyPredictions : monthlyPredictions;
-                    let actual = mode === 'yearly' ? yearlyActual : monthlyActual;
-
-                    // Atur ukuran canvas: untuk mode yearly, gunakan lebar penuh window; untuk mode monthly, lebar manual (2000px)
-                    document.getElementById('predictionChart').width = mode === 'yearly' ? window.innerWidth - 40 :
-                    2000;
-                    document.getElementById('predictionChart').height = 500;
-
-                    if (window.myLineChart) {
-                        window.myLineChart.destroy();
+                    let labels, predictions, actual;
+                    if (mode === 'monthlyHistorical') {
+                        labels = monthlyLabelsHistorical;
+                        predictions = monthlyPredictionsHistorical;
+                        actual = null;
+                    } else if (mode === 'monthlyFuture') {
+                        labels = monthlyLabelsFuture;
+                        predictions = monthlyPredictionsFuture;
+                        actual = null;
+                    } else if (mode === 'yearlyHistorical') {
+                        labels = yearlyLabelsHistorical;
+                        predictions = yearlyPredictionsHistorical;
+                        actual = yearlyActualHistorical;
+                    } else if (mode === 'yearlyFuture') {
+                        labels = yearlyLabelsFuture;
+                        predictions = yearlyPredictionsFuture;
+                        actual = null;
                     }
 
-                    window.myLineChart = new Chart(ctx, {
+                    // Sortir label untuk mode bulanan
+                    if (mode === 'monthlyHistorical' || mode === 'monthlyFuture') {
+                        labels.sort((a, b) => a.localeCompare(b));
+                    }
+
+                    // Atur ukuran canvas
+                    document.getElementById('predictionChart').width = (mode === 'yearlyHistorical' || mode ===
+                        'yearlyFuture') ? window.innerWidth - 40 : 2000;
+                    document.getElementById('predictionChart').height = 500;
+
+                    if (myLineChart) {
+                        myLineChart.destroy();
+                    }
+
+                    myLineChart = new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: labels,
@@ -147,7 +184,7 @@
                                     fill: true,
                                     lineTension: 0.3
                                 },
-                                ...(actual ? [{
+                                (actual ? [{
                                     label: 'Aktual',
                                     data: actual,
                                     backgroundColor: 'rgba(255,99,132,0.2)',
@@ -166,11 +203,13 @@
                                 xAxes: [{
                                     scaleLabel: {
                                         display: true,
-                                        labelString: mode === 'yearly' ? 'Tahun' : 'Bulan'
+                                        labelString: (mode === 'yearlyHistorical' || mode ===
+                                            'yearlyFuture') ? 'Tahun' : 'Bulan'
                                     },
                                     ticks: {
                                         callback: function(value) {
-                                            if (mode === 'yearly') {
+                                            if (mode === 'yearlyHistorical' || mode ===
+                                                'yearlyFuture') {
                                                 return value;
                                             } else {
                                                 const parts = value.split('-');
@@ -210,37 +249,48 @@
                     });
                 }
 
-                // Inisialisasi chart dengan mode default (monthly)
-                renderChart('monthly');
+                // Inisialisasi chart dengan mode default (Bulanan Historis)
+                renderChart('monthlyHistorical');
 
                 // Tombol switch mode
-                const btnMonthly = document.getElementById('btnMonthly');
-                const btnYearly = document.getElementById('btnYearly');
+                const btnMonthlyHistorical = document.getElementById('btnMonthlyHistorical');
+                const btnMonthlyFuture = document.getElementById('btnMonthlyFuture');
+                const btnYearlyHistorical = document.getElementById('btnYearlyHistorical');
+                const btnYearlyFuture = document.getElementById('btnYearlyFuture');
 
-                function setActive(btnActive, btnInactive) {
-                    btnActive.classList.add('active');
-                    btnInactive.classList.remove('active');
-                    btnActive.classList.remove('inactive');
-                    btnInactive.classList.add('inactive');
-                    btnActive.disabled = true;
-                    btnInactive.disabled = false;
+                function setActive(activeBtn, ...inactiveBtns) {
+                    activeBtn.classList.add('active');
+                    activeBtn.classList.remove('inactive');
+                    activeBtn.disabled = true;
+                    inactiveBtns.forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.classList.add('inactive');
+                        btn.disabled = false;
+                    });
                 }
 
-                btnMonthly.addEventListener('click', function() {
-                    renderChart('monthly');
-                    setActive(btnMonthly, btnYearly);
+                btnMonthlyHistorical.addEventListener('click', function() {
+                    renderChart('monthlyHistorical');
+                    setActive(btnMonthlyHistorical, btnMonthlyFuture, btnYearlyHistorical, btnYearlyFuture);
                 });
-                btnYearly.addEventListener('click', function() {
-                    renderChart('yearly');
-                    setActive(btnYearly, btnMonthly);
+                btnMonthlyFuture.addEventListener('click', function() {
+                    renderChart('monthlyFuture');
+                    setActive(btnMonthlyFuture, btnMonthlyHistorical, btnYearlyHistorical, btnYearlyFuture);
+                });
+                btnYearlyHistorical.addEventListener('click', function() {
+                    renderChart('yearlyHistorical');
+                    setActive(btnYearlyHistorical, btnMonthlyHistorical, btnMonthlyFuture, btnYearlyFuture);
+                });
+                btnYearlyFuture.addEventListener('click', function() {
+                    renderChart('yearlyFuture');
+                    setActive(btnYearlyFuture, btnMonthlyHistorical, btnMonthlyFuture, btnYearlyHistorical);
                 });
 
                 // Set initial state
-                setActive(btnMonthly, btnYearly);
+                setActive(btnMonthlyHistorical, btnMonthlyFuture, btnYearlyHistorical, btnYearlyFuture);
 
-                // Fungsi Download PDF: tangkap seluruh area grafik (meskipun tidak terlihat karena scroll)
+                // Fungsi Download PDF
                 document.getElementById('btnDownload').addEventListener('click', function() {
-                    // Tampilkan loading icon
                     document.getElementById('loadingIcon').classList.remove('hidden');
                     document.querySelector('.btn-text').textContent = 'Memproses...';
 
@@ -273,7 +323,6 @@
                             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
                         }
                         pdf.save('hasil_prediksi_panen.pdf');
-                        // Sembunyikan loading icon dan reset tombol
                         document.getElementById('loadingIcon').classList.add('hidden');
                         document.querySelector('.btn-text').textContent = 'Download PDF';
                     });

@@ -73,7 +73,64 @@ class SiteController extends Controller
             )->post('http://localhost:5000/predict');
 
             if ($response->successful()) {
+                // Data response dari API Flask sudah mengandung kunci baru:
+                // timeLabelsMonthlyHistorical, predictionsMonthlyHistorical,
+                // timeLabelsMonthlyFuture, predictionsMonthlyFuture,
+                // timeLabelsYearlyHistorical, predictionsYearlyHistorical, actualYearlyHistorical,
+                // conclusion, suggestion.
                 $data = $response->json()['data'];
+
+                // --- Hitung prediksi tahunan masa depan dari data bulanan ---
+                if (isset($data['timeLabelsMonthlyFuture']) && isset($data['predictionsMonthlyFuture'])) {
+                    $yearlyFuture = [];
+                    foreach ($data['timeLabelsMonthlyFuture'] as $index => $label) {
+                        list($year, $month) = explode('-', $label);
+                        $yearlyFuture[$year][] = $data['predictionsMonthlyFuture'][$index];
+                    }
+                    $aggregatedYearlyFuture = [];
+                    foreach ($yearlyFuture as $year => $values) {
+                        $aggregatedYearlyFuture[$year] = array_sum($values) / count($values);
+                    }
+                    ksort($aggregatedYearlyFuture);
+                    $data['timeLabelsYearlyFuture'] = array_keys($aggregatedYearlyFuture);
+                    $data['predictionsYearlyFuture'] = array_values($aggregatedYearlyFuture);
+                } else {
+                    $data['timeLabelsYearlyFuture'] = [];
+                    $data['predictionsYearlyFuture'] = [];
+                }
+
+                // --- Buat penjelasan detail prediksi masa depan secara statis ---
+                if (isset($data['timeLabelsMonthlyFuture']) && isset($data['predictionsMonthlyFuture'])) {
+                    $futureLabels = $data['timeLabelsMonthlyFuture'];
+                    $futurePredictions = $data['predictionsMonthlyFuture'];
+                    $yearlyFutureGroup = [];
+                    foreach ($futureLabels as $index => $label) {
+                        list($year, $month) = explode('-', $label);
+                        $yearlyFutureGroup[$year][] = $futurePredictions[$index];
+                    }
+                    $aggregatedFuture = [];
+                    foreach ($yearlyFutureGroup as $year => $values) {
+                        $aggregatedFuture[$year] = array_sum($values) / count($values);
+                    }
+                    ksort($aggregatedFuture);
+                    $detailedExplanationFuture = "";
+                    $prevYear = null;
+                    $prevValue = null;
+                    foreach ($aggregatedFuture as $year => $value) {
+                        if ($prevYear !== null) {
+                            if ($value < $prevValue) {
+                                $detailedExplanationFuture .= "Pada tahun $year, hasil panen diprediksi menurun dibandingkan tahun $prevYear. Hal ini kemungkinan disebabkan oleh penurunan curah hujan dan kelembapan yang tidak optimal, serta faktor luas area yang kurang mendukung. ";
+                            } else {
+                                $detailedExplanationFuture .= "Pada tahun $year, hasil panen diprediksi meningkat dibandingkan tahun $prevYear. Hal ini didukung oleh kondisi cuaca yang lebih baik dan peningkatan faktor pendukung seperti dosis pupuk. ";
+                            }
+                        }
+                        $prevYear = $year;
+                        $prevValue = $value;
+                    }
+                    $data['detailedExplanationFuture'] = $detailedExplanationFuture;
+                } else {
+                    $data['detailedExplanationFuture'] = "";
+                }
                 Session::put('analysis_data', $data);
                 fclose($tempFile);
                 return redirect()->route('results');
@@ -82,7 +139,7 @@ class SiteController extends Controller
             return redirect()->back()->withErrors(['file' => 'Gagal memproses prediksi']);
         } catch (\Exception $e) {
             fclose($tempFile);
-            return redirect()->back()->withErrors(['file' => 'Gagal memproses file: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['file' => 'Gagal memproses file: Kesalahan Internal ']);
         }
     }
 
