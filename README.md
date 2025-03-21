@@ -49,37 +49,37 @@ Pastikan sistem Anda memiliki:
 - Git
 
 ### 1. Clone Repository
-
 ```bash
 git clone https://github.com/yourusername/prediksi-hasil-panen.git
 cd prediksi-hasil-panen
+```
 
 ### 2. Instalasi Laravel
 Instal dependensi PHP dengan Composer:
-
 ```bash
 composer install
+```
 
 Salin file .env.example ke .env dan atur konfigurasi (database, APP_KEY, dsb.):
-
 ```bash
 cp .env.example .env
+```
 ```bash
 php artisan key:generate
+```
 
 Instal dependensi Node.js:
-
 ```bash
 npm install
+```
 
 Kemudian compile asset dengan Vite:
-
 ```bash
 npm run dev
+```
 
 3. Konfigurasi Database
 Atur koneksi database di file .env, misalnya:
-
 ```bash
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -87,13 +87,14 @@ DB_PORT=3306
 DB_DATABASE=prediksi_panen
 DB_USERNAME=root
 DB_PASSWORD=
+```
 
 Jalankan migrasi (jika ada):
-
 ```bash
 php artisan migrate
+```
 
 4. Menjalankan Server Laravel
-
 ```bash
 php artisan serve
+```
