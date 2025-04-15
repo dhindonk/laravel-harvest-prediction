@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-6">
-        <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-            <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-4">
+    <div class="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">
                 {{ $article['title'] }}
             </h1>
 
@@ -12,7 +12,7 @@
                 $parsedown->setBreaksEnabled(true);
             @endphp
 
-            <div class="text-gray-400 prose dark:prose-dark max-w-none">
+            <div class="text-gray-400 prose max-w-none">
                 {!! $parsedown->text($article['content']) !!}
             </div>
 

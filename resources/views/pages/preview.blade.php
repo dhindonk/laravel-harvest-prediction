@@ -2,41 +2,56 @@
 
 @section('content')
     <div class="min-h-screen flex flex-col items-center justify-center">
-        <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-8 w-full max-w-4xl">
-            {{-- <h2 class="text-2xl font-bold mb-4 text-center">Preview Data CSV (5 Baris Pertama)</h2> --}}
-            <div
-                class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
+        <div class="mt-6 mb-6" style="padding-left: 100px; width: 100%; text-align: start !important">
+            <a href="{{ route('home') }}" class="text-gray-500 hover:text-gray-700">
+                ← Kembali ke halaman upload
+            </a>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-8 w-full max-w-4xl">
+            @if (session('error'))
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                    <span class="block sm:inline">{{ session('error') }}</span>
+                </div>
+            @endif
+            <div class="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Preview Data CSV</h3>
-                    <span
-                        class="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 rounded-full">
-                        5 Baris Pertama
+                    <h3 class="text-lg font-semibold text-gray-900">Preview Data CSV</h3>
+                    <span class="px-3 py-1 text-sm text-blue-600 bg-blue-100 rounded-full">
+                        <p class="mb-0">Nama file: {{ $fileName }}</p>
+                    </span>
+                    <span class="px-3 py-1 text-sm text-blue-600 bg-blue-100 rounded-full">
+                        <p class="mb-0">Total baris: {{ count($data) - 1 }}</p>
                     </span>
                 </div>
             </div>
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto" style="scrollbar-width: thin">
                 <table class="min-w-full border-collapse mb-6">
-                    <thead class="bg-gray-50 dark:bg-gray-800">
+                    <thead class="bg-gray-50">
                         <tr>
-                            @foreach ($headers as $header)
-                                <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            @foreach ($data[0] as $header)
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     {{ $header }}
                                 </th>
                             @endforeach
                         </tr>
                     </thead>
-                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        @foreach ($rows as $row)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        @foreach (array_slice($data, 1, 5) as $row)
+                            <tr class="hover:bg-gray-50">
                                 @foreach ($row as $cell)
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                                        {{ $cell }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ $cell }}
+                                    </td>
                                 @endforeach
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
+                @if (count($data) > 6)
+                    <div class="mb-4 text-start text-gray-600">
+                        <p>Menampilkan 5 baris pertama dari {{ count($data) - 1 }} baris data</p>
+                    </div>
+                @endif
             </div>
 
             <form style="margin: 20px ; display: flex; justify-content: center; align-items: center;"
@@ -69,8 +84,8 @@
             </form>
 
             @if ($errors->any())
-                <div class="p-4 mt-4 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
-                    <p class="flex items-center text-red-600 dark:text-red-400 text-sm">
+                <div class="p-4 mt-4 bg-red-50 rounded border border-red-200">
+                    <p class="flex items-center text-red-600 text-sm">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -80,12 +95,7 @@
                 </div>
             @endif
 
-            <div class="mt-6 text-center">
-                <a href="{{ route('home') }}"
-                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
-                    ← Kembali ke halaman upload
-                </a>
-            </div>
+            
         </div>
     </div>
 

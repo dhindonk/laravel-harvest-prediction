@@ -86,14 +86,28 @@ Artikel ini memberikan tutorial langkah demi langkah mengenai cara input data da
    Pastikan data panen diorganisir dengan rapi, misalnya dengan kolom: Tanggal, Luas Lahan, Jumlah Panen, dan variabel relevan lainnya.
 
 2. **Format Excel:**  
-   Gunakan format tabel dan pastikan setiap kolom memiliki header yang jelas.
+   Gunakan format tabel dan pastikan setiap kolom memiliki header yang jelas. Header yang diperlukan antara lain:
+   - Tahun
+   - Bulan
+   - Suhu (°C)
+   - Curah_Hujan (mm/tahun)
+   - Kelembapan (%)
+   - Dosis_Pupuk (kg/ha)
+   - Umur_Tanaman (bulan)
+   - Luas_Lahan (ha)
+   - Hasil_Panen (kwintal/ha)
+   - Lokasi
+   - Area (m2)
+   - Pelepah_Terkena_Penyakit (kw)
 
-3. **Tips Pengolahan Data:**  
+3. **Download Template:**  
+   Untuk memudahkan, silakan download template Excel yang sudah disesuaikan dengan format di atas. Isilah data di Excel, kemudian simpan sebagai CSV untuk di-upload ke sistem.
+
+4. **Tips Pengolahan Data:**  
    - Gunakan filter dan sorting untuk memudahkan analisis.
-   - Gunakan fungsi-fungsi bawaan Excel (seperti SUM, AVERAGE) untuk analisis awal.
-   - Pastikan data tidak mengandung nilai yang kosong.
+   - Pastikan tidak ada kolom tambahan atau data kosong.
+   - Ikuti petunjuk di template untuk menjaga konsistensi format.
 
-Ikuti tutorial ini untuk memaksimalkan analisis data panen Anda.
 EOT
         ],
     ];
@@ -111,5 +125,16 @@ EOT
         }
         $article = $this->articles[$id];
         return view('articles.show', compact('article'));
+    }
+
+    // Method untuk download template Excel
+    public function downloadTemplate()
+    {
+        $path = public_path('template_dataset.xlsx');
+        if (file_exists($path)) {
+            return response()->download($path, 'template_dataset.xlsx');
+        } else {
+            abort(404, 'Template tidak ditemukan.');
+        }
     }
 }
